@@ -1,0 +1,134 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fixed Layered Coloring Book</title>
+    <style>
+        body { text-align: center; font-family: sans-serif; background-color: #f0f0f0; }
+        #container { position: relative; display: inline-block; }
+        canvas { border: 1px solid #aaa; touch-action: none; }
+        #lineArtCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+            pointer-events: none;
+        }
+        #colorCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        .toolbar {
+            margin-top: 820px;
+        }
+        .color-button {
+            width: 30px; height: 30px; border-radius: 50%; margin: 0 5px;
+            cursor: pointer; display: inline-block; border: 2px solid #fff;
+        }
+        .tool-button {
+            margin: 0 5px; padding: 5px 10px;
+            cursor: pointer; border: 1px solid #aaa; border-radius: 5px;
+            background: #fff;
+        }
+    </style>
+</head>
+<body>
+    <h2>Layered Coloring Book Demo (Fixed)</h2>
+    <div id="container">
+        <canvas id="colorCanvas" width="600" height="800"></canvas>
+        <canvas id="lineArtCanvas" width="600" height="800"></canvas>
+    </div>
+    <div class="toolbar">
+        <div class="color-button" style="background-color:red" onclick="setColor('red')"></div>
+        <div class="color-button" style="background-color:orange" onclick="setColor('orange')"></div>
+        <div class="color-button" style="background-color:yellow" onclick="setColor('yellow')"></div>
+        <div class="color-button" style="background-color:green" onclick="setColor('green')"></div>
+        <div class="color-button" style="background-color:blue" onclick="setColor('blue')"></div>
+        <div class="color-button" style="background-color:purple" onclick="setColor('purple')"></div>
+        <div class="color-button" style="background-color:black" onclick="setColor('black')"></div>
+        <div class="color-button" style="background-color:white" onclick="setColor('white')"></div>
+        <button class="tool-button" onclick="setEraser()">Eraser</button>
+        <button class="tool-button" onclick="undo()">Undo</button>
+    </div>
+
+    <script>
+        const colorCanvas = document.getElementById('colorCanvas');
+        const lineArtCanvas = document.getElementById('lineArtCanvas');
+        const colorCtx = colorCanvas.getContext('2d');
+        const lineArtCtx = lineArtCanvas.getContext('2d');
+        const lineArt = new Image();
+        let drawing = false;
+        let currentColor = 'red';
+        let isEraser = false;
+        const history = [];
+
+        lineArt.onload = function () {
+            lineArtCtx.drawImage(lineArt, 0, 0, lineArtCanvas.width, lineArtCanvas.height);
+        };
+        lineArt.src = 'coloring_page.png';
+
+        function setColor(color) {
+            currentColor = color;
+            isEraser = false;
+        }
+
+        function setEraser() {
+            isEraser = true;
+        }
+
+        function saveState() {
+            if (history.length > 10) history.shift();
+            history.push(colorCanvas.toDataURL());
+        }
+
+        function undo() {
+            if (history.length > 0) {
+                const imgData = new Image();
+                imgData.onload = function () {
+                    colorCtx.clearRect(0, 0, colorCanvas.width, colorCanvas.height);
+                    colorCtx.drawImage(imgData, 0, 0);
+                };
+                imgData.src = history.pop();
+            }
+        }
+
+        function getEventCoords(e) {
+            const rect = colorCanvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        colorCanvas.addEventListener('pointerdown', function(e) {
+            saveState();
+            drawing = true;
+            const { x, y } = getEventCoords(e);
+            colorCtx.beginPath();
+            colorCtx.moveTo(x, y);
+        });
+
+        colorCanvas.addEventListener('pointermove', function(e) {
+            if (!drawing) return;
+            const { x, y } = getEventCoords(e);
+            colorCtx.lineWidth = 8;
+            colorCtx.lineCap = 'round';
+            colorCtx.strokeStyle = isEraser ? '#ffffff' : currentColor;
+            colorCtx.lineTo(x, y);
+            colorCtx.stroke();
+        });
+
+        colorCanvas.addEventListener('pointerup', function() {
+            drawing = false;
+            colorCtx.beginPath();
+        });
+
+        colorCanvas.addEventListener('pointerleave', function() {
+            drawing = false;
+            colorCtx.beginPath();
+        });
+    </script>
+</body>
+</html>
